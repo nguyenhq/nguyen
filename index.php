@@ -152,7 +152,7 @@ class Request {
 	public function getCalendarById($id){
 		$this->connectDb();
 		// query get calendar by id
-		$query = "SELECT t.name as home_team, t.name as away_team, m.home_score, m.away_score FROM events e,matches m, teams t WHERE e.id = m.event_id AND m.home_team_id =t.id AND m.away_team_id = t.id AND m.home_team_id != m.away_team_id AND e.id = $id"; 
+		$query = "select distinct(th.name) as home_team, ta.name as away_team, m.home_score as home_score, m.away_score as away_score from events e, matches m,teams th,teams ta where e.id = m.event_id and m.home_team_id = ta.id and m.away_team_id = th.id and e.id=$id"; 
 		$result = pg_query($query);
         if (!$result) {
             echo "Problem with query " . $query . "<br/>";
@@ -160,13 +160,13 @@ class Request {
             exit();
         }  
         while($r = pg_fetch_array($result)) {
-			//$myrow[] = $r;
-           //print json_encode($myrow);
-           echo $myrow = $r['home_team'];
+			$myrow[] = $r;
+           print json_encode($myrow);
+          
         }
         pg_close();
 	}
-	public function DelTeamById($id){
+	public function delTeamById($id){
 		$this->connectDb();
 		// query delete team by id
 		// first one, delete match this team is in
@@ -180,7 +180,7 @@ class Request {
 		$result3 = pg_query($query3);	
         pg_close();
 	}
-	public function DelEventById($id){
+	public function delEventById($id){
 		$this->connectDb();
 		// query delete event by id
 		// first one, delete match this event is in
@@ -193,76 +193,48 @@ class Request {
 		$result2 = pg_query($query2);	
         pg_close();
 	}
-	public function ModEvent($id,$name, $event_start_date, $event_end_date){
+	public function modEvent($id,$name, $event_start_date, $event_end_date){
 		$this->connectDb();
 		// query update event by id
 		$query = "UPDATE events SET name = $name, event_start_date = $event_start_date, event_end_date = $event_end_date WHERE id = $id";
 		$result = pg_query($query);
         pg_close();
 	}
-	public function ModTeam($id,$name){
+	public function modTeam($id,$name){
 		$this->connectDb();
 		// query update team by id
 		$query = "UPDATE teams SET name = $name WHERE id = $id";
 		$result = pg_query($query);
         pg_close();
 	}
-	public function AddEvent($name,$event_start_date,$event_end_date){
+	public function addEvent($name,$event_start_date,$event_end_date){
 		$this->connectDb();
 		// query add event
 		$query = "INSERT INTO events(name, event_start_date, event_end_date) 
 					VALUES 
 					($name,$event_start_date,$event_end_date)";
-		$result1 = pg_query($query);
+		$result = pg_query($query);
         pg_close();
 	}
-	public function AddTeam($name){
+	public function addTeam($name){
 		$this->connectDb();
-		// query add team
-		$query = "INSERT INTO teams(name) 
+		// be sure the name of the new team is different from the others.
+		$query1 = "SELECT count(name) FROM teams WHERE name = $name";
+		$result1 = pg_query($query1);
+		$r = pg_fetch_array($result1);
+		$myrow = $r['count'];
+		if($myrow = 0){
+			// query add team
+			$query = "INSERT INTO teams(name) 
 					VALUES ($name)";
-		$result1 = pg_query($query);
+			$result = pg_query($query);
+		}
+		else
+			return $error= "the name of the new team is existe";
+		
         pg_close();
 	}
 	
-    public function parseIncomingParams() {
-        $parameters = array();
-
-        // first of all, pull the GET vars
-        if (isset($_SERVER['QUERY_STRING'])) {
-            parse_str($_SERVER['QUERY_STRING'], $parameters);
-        }
-
-        // now how about PUT/POST bodies? These override what we got from GET
-        $body = file_get_contents("php://input");
-        $content_type = false;
-        if(isset($_SERVER['CONTENT_TYPE'])) {
-            $content_type = $_SERVER['CONTENT_TYPE'];
-        }
-        switch($content_type) {
-            case "application/json":
-                $body_params = json_decode($body);
-                if($body_params) {
-                    foreach($body_params as $param_name => $param_value) {
-                        $parameters[$param_name] = $param_value;
-                    }
-                }
-                $this->format = "json";
-                break;
-            case "application/x-www-form-urlencoded":
-                parse_str($body, $postvars);
-                foreach($postvars as $field => $value) {
-                    $parameters[$field] = $value;
-
-                }
-                $this->format = "html";
-                break;
-            default:
-                // we could parse other supported formats here
-                break;
-        }
-        $this->parameters = $parameters;
-    }
 }
 $toto = new Request;
 echo"<pre>";
@@ -275,9 +247,8 @@ echo "</pre>";
 			if($url[1]!=null){
 				$urlId=explode(":", substr($url[1], 1));
 				$toto->getEventById($urlId[0]);
-				if($url[2]=="schedule"){
+				if($url[2]=="schedule"){ //display calandar of match by id_event
 					$toto->getCalendarById($urlId[0]);
-					
 				}
 				else
 				$toto->getEventById($urlId[0]);
@@ -305,6 +276,20 @@ echo "</pre>";
 	}
 	if($method = "POST"){
 		// fucntion add news inside database
+		// add new event.
+		if ($url[0]=="events"){
+			$name = $_POST["name"];
+			$event_start = $_POST["event_start_date"];
+			$event_end = $_POST["event_end_date"];
+			$toto->addEvent($name,$event_start,$event_end);
+			}
+		// add new team
+		if ($url[0]=="teams"){
+			$name = $_POST["name"];
+
+			$toto->addTeam($name);
+		}
+		
 	}
 	if($method = "PUT"){
 		// fucntion modifie in database
@@ -312,6 +297,5 @@ echo "</pre>";
 	if($method = "DELETE"){
 		// fucntion delete in database
 	}
-	//$toto ->getCalendarById(2);
 	
 ?>
