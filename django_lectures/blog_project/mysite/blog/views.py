@@ -53,6 +53,14 @@ class DraftListView(LoginRequiredMixin,ListView):
 ## Functions that require a primary key match ##
 #######################################
 @login_required
+# need one more function view in order to publish
+def post_publish(request,pk):
+    post = get_object_or_404(Post,pk):
+    post.publish()  # call function publish in models.py
+    return redirect('post_detail',pk =pk)
+    # don't forget to make a url in urls.py
+
+@login_required
 def add_comment_to_post(request,pk):
     post = get_object_or_404(Post,pk=pk) #finding it in passen the post's model and primary KEY
     if request.method == 'POST': # if the request the methode is to post (someone enter something in the form)
@@ -67,4 +75,18 @@ def add_comment_to_post(request,pk):
         return redirect('post_detail',pk=post.pk)
     else:
         form = CommentForm()
-        return render(request,'blog/comment_form.html',{'form': form}) #charging data in forms.py
+        return render(request,'blog/comment_form.html',{'form': form}) #charging data of forms.py in dictionary contexte
+
+@login_required
+def comment_approve(request, pk):
+    comment = get_object_or_404(Comment,pk) #Comment's model
+    comment.approve()
+    return redirect('post_detail', pk = comment.post.pk)
+
+@login_required
+def comment_remove(request,pk):
+    comment = get_object_or_404(Comment,pk) #get comment
+    post_pk = comment.post.pk # create a new variable to identify the post where this comment is deleting
+    comment.delete() # and then delete comment
+    return redirect('post_detail', pk=post_pk)
+    # make a url in urls.py

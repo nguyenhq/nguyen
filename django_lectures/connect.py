@@ -5,10 +5,12 @@ import time
 start_time = time.time()
 conn = psycopg2.connect(
     database = "darese",
-    user="inra_admin",
-    password="au0luh",
-    host="vmi-prod-114.jouy.inra.fr",
-    port="54374"
+    user="inra",
+    password="inra",
+    #host="vmi-prod-114.jouy.inra.fr",
+    #port="54374"
+    host="vmi-preprod-108.jouy.inra.fr",
+    port="54373"
 )
 print("conneted to postgreAdmin")
 
